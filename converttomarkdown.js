@@ -28,7 +28,21 @@ function ConvertToMarkdown() {
     var result = processParagraph(i, child, inSrc, globalImageCounter, globalListCounters);
     globalImageCounter += (result && result.images) ? result.images.length : 0;
     if (result!==null) {
-      if (result.sourcePretty==="start" && !inSrc) {
+      if (result.jekyllHeader==="start" && !inSrc) {
+        inSrc=true;
+        text+="---\n"
+      } else if (result.jekyllHeader==="end" && inSrc) {
+        inSrc=false;
+        var today = new Date();
+        var date = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate()
+        text+="layout: post\ndate: " + date + "\n---\n\n"
+      } else if(result.sourceWithType==="start" && !inSrc) {
+        inSrc=true;
+        text+="```"+result.sourceType+"\n";
+      } else if (result.sourceWithType==="end" && inSrc) {
+        inSrc=false;
+        text+="```\n\n";
+      } else if (result.sourcePretty==="start" && !inSrc) {
         inSrc=true;
         text+="<pre class=\"prettyprint\">\n";
       } else if (result.sourcePretty==="end" && inSrc) {
@@ -51,7 +65,7 @@ function ConvertToMarkdown() {
       } else if (inSrc) {
         text+=(srcIndent+escapeHTML(result.text)+"\n");
       } else if (result.text && result.text.length>0) {
-        text+=result.text+"\n\n";
+          text+=result.text+"\n\n";
       }
       
       if (result.images && result.images.length>0) {
@@ -78,7 +92,8 @@ function ConvertToMarkdown() {
 }
 
 function escapeHTML(text) {
-  return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text;
 }
 
 // Process each child element (not just paragraphs).
@@ -164,17 +179,25 @@ function processParagraph(index, element, inSrc, imageCounter, listCounters) {
   
   // evb: Add source pretty too. (And abbreviations: src and srcp.)
   // process source code block:
-  if (/^\s*---\s+srcp\s*$/.test(pOut) || /^\s*---\s+source pretty\s*$/.test(pOut)) {
+  if(/^\s*---header\s*$/.test(pOut)) {
+    result.jekyllHeader = "start";
+  } else if (/^\s*```([a-zA-Z0-9]+)\s*$/.test(pOut)) {
+    result.sourceWithType = "start";
+    result.sourceType = RegExp.$1;
+  } else if (/^\s*---\s+srcp\s*$/.test(pOut) || /^\s*---\s+source pretty\s*$/.test(pOut)) {
     result.sourcePretty = "start";
   } else if (/^\s*---\s+src\s*$/.test(pOut) || /^\s*---\s+source code\s*$/.test(pOut)) {
     result.source = "start";
   } else if (/^\s*---\s+class\s+([^ ]+)\s*$/.test(pOut)) {
     result.inClass = "start";
     result.className = RegExp.$1;
-  } else if (/^\s*---\s*$/.test(pOut)) {
+  } else if (/^\s*```\s*$/.test(pOut)) {
+    result.sourceWithType = "end";  
+  } else if (/^\s*---\s*$/.test(pOut) || /^\s*```\s*$/.test(pOut)) {
     result.source = "end";
     result.sourcePretty = "end";
     result.inClass = "end";
+    result.jekyllHeader = "end"
   } else if (/^\s*---\s+jsperf\s*([^ ]+)\s*$/.test(pOut)) {
     result.text = '<iframe style="width: 100%; height: 340px; overflow: hidden; border: 0;" '+
                   'src="http://www.html5rocks.com/static/jsperfview/embed.html?id='+RegExp.$1+
