@@ -9,7 +9,7 @@ Usage:
     - Click Run button.
     - Converted doc will be mailed to you. Subject will be "[MARKDOWN_MAKER]...".
 */
-
+var blogImageDir = "{{blogImageDir}}"
 function ConvertToMarkdown() {
   var numChildren = DocumentApp.getActiveDocument().getActiveSection().getNumChildren();
   var text = "";
@@ -35,6 +35,8 @@ function ConvertToMarkdown() {
         inSrc=false;
         var today = new Date();
         var date = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate()
+        // Remove the image dir value
+        // text = text.replace(/^\s*{{blogImageDir}}:\s+([a-zA-Z0-9 ]+)/i, "");
         text+="layout: post\ndate: " + date + "\n---\n\n"
       } else if(result.sourceWithType==="start" && !inSrc) {
         inSrc=true;
@@ -155,7 +157,7 @@ function processParagraph(index, element, inSrc, imageCounter, listCounters) {
       }
       var name = imagePrefix + imageCounter + extension;
       imageCounter++;
-      textElements.push('![image alt text]('+name+')');
+      textElements.push('![]({{ baseurl }}/blog/images/'+ blogImageDir + '/'+name+')');
       result.images.push( {
         "bytes": element.getChild(i).getBlob().getBytes(), 
         "type": contentType, 
@@ -179,7 +181,10 @@ function processParagraph(index, element, inSrc, imageCounter, listCounters) {
   
   // evb: Add source pretty too. (And abbreviations: src and srcp.)
   // process source code block:
-  if(/^\s*---header\s*$/.test(pOut)) {
+  if (/^\s*blogImageDir:\s+([^ ]+)\s*$/.test(pOut)) {
+    blogImageDir = RegExp.$1;
+    result.text = ""
+  }  if(/^\s*---header\s*$/.test(pOut)) {
     result.jekyllHeader = "start";
   } else if (/^\s*```([a-zA-Z0-9]+)\s*$/.test(pOut)) {
     result.sourceWithType = "start";
