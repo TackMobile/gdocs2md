@@ -36,6 +36,9 @@ A simple Google Apps script to convert a properly formatted Google Drive Documen
     * Source code: 
       * **UPDATED**: blocks of text delimited by "--- source code" or "--- src" and "---" are converted to `<pre></pre>`
       * **NEW**: blocks of text delimited by "--- source pretty" or "--- srcp" and "---" are converted to `<pre class="prettyprint"></pre>`
+      * Source blocks delimited with "\`\`\`srcType" (eg: \`\`\`java) and ``` are respected and kept intact
+    * Jekyll Header:
+      * Block delimited with "---header" and "---" should contain at least the title in format "title: "Some Title"" and author in format "author: Author Name". A "layout: post" and "date: 2017-09-27" will be appended to the header. If images are pressent, a blogImageDir value should be present "blogImageDir: directoryImagesWillBeIn"
     * Tables:
       * **NEW**: Simple `<table>` processing
   * "--- jsperf `<testID>`" is replaced by an iframe that shows an interactive chart of a JSPerf test. The `<testID>` is the last part of the URL of the Browserscope anchor in your JSPerf test. Something like `"agt1YS1wcm9maWxlcnINCxIEVGVzdBjlm_EQDA"` in the URL `http://www.browserscope.org/user/tests/table/agt1YS1wcm9maWxlcnINCxIEVGVzdBjlm_EQDA`
