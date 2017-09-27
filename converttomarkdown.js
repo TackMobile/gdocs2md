@@ -10,6 +10,36 @@ Usage:
     - Converted doc will be mailed to you. Subject will be "[MARKDOWN_MAKER]...".
 */
 var blogImageDir = "{{blogImageDir}}"
+
+/**
+ * Creates a menu entry in the Google Docs UI when the document is opened.
+ *
+ * @param {object} e The event parameter for a simple onOpen trigger. To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode.
+ */
+function onOpen(e) {
+    DocumentApp.getUi().createAddonMenu()
+        .addItem('Convert to Markdown', 'ConvertToMarkdown')
+        .addToUi();
+}
+
+/**
+ * Runs when the add-on is installed.
+ *
+ * @param {object} e The event parameter for a simple onInstall trigger. To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode. (In practice, onInstall triggers always
+ *     run in AuthMode.FULL, but onOpen triggers may be AuthMode.LIMITED or
+ *     AuthMode.NONE.)
+ */
+function onInstall(e) {
+    //When the document is first installed, clear out the user preferences set already
+    var scriptProperties = PropertiesService.getUserProperties();
+    onOpen(e);
+}
+
+
 function ConvertToMarkdown() {
   var numChildren = DocumentApp.getActiveDocument().getActiveSection().getNumChildren();
   var text = "";
@@ -21,77 +51,97 @@ function ConvertToMarkdown() {
   var srcIndent = "";
   
   var attachments = [];
-  
-  // Walk through all the child elements of the doc.
-  for (var i = 0; i < numChildren; i++) {
-    var child = DocumentApp.getActiveDocument().getActiveSection().getChild(i);
-    var result = processParagraph(i, child, inSrc, globalImageCounter, globalListCounters);
-    globalImageCounter += (result && result.images) ? result.images.length : 0;
-    if (result!==null) {
-      if (result.jekyllHeader==="start" && !inSrc) {
-        inSrc=true;
-        text+="---\n"
-      } else if (result.jekyllHeader==="end" && inSrc) {
-        inSrc=false;
-        var today = new Date();
-        var date = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate()
-        // Remove the image dir value
-        // text = text.replace(/^\s*{{blogImageDir}}:\s+([a-zA-Z0-9 ]+)/i, "");
-        text+="layout: post\ndate: " + date + "\n---\n\n"
-      } else if(result.sourceWithType==="start" && !inSrc) {
-        inSrc=true;
-        text+="```"+result.sourceType+"\n";
-      } else if (result.sourceWithType==="end" && inSrc) {
-        inSrc=false;
-        text+="```\n\n";
-      } else if (result.sourcePretty==="start" && !inSrc) {
-        inSrc=true;
-        text+="<pre class=\"prettyprint\">\n";
-      } else if (result.sourcePretty==="end" && inSrc) {
-        inSrc=false;
-        text+="</pre>\n\n";
-      } else if (result.source==="start" && !inSrc) {
-        inSrc=true;
-        text+="<pre>\n";
-      } else if (result.source==="end" && inSrc) {
-        inSrc=false;
-        text+="</pre>\n\n";
-      } else if (result.inClass==="start" && !inClass) {
-        inClass=true;
-        text+="<div class=\""+result.className+"\">\n";
-      } else if (result.inClass==="end" && inClass) {
-        inClass=false;
-        text+="</div>\n\n";
-      } else if (inClass) {
-        text+=result.text+"\n\n";
-      } else if (inSrc) {
-        text+=(srcIndent+escapeHTML(result.text)+"\n");
-      } else if (result.text && result.text.length>0) {
+  try {
+    // Walk through all the child elements of the doc.
+    for (var i = 0; i < numChildren; i++) {
+      var child = DocumentApp.getActiveDocument().getActiveSection().getChild(i);
+      var result = processParagraph(i, child, inSrc, globalImageCounter, globalListCounters);
+      globalImageCounter += (result && result.images) ? result.images.length : 0;
+      if (result!==null) {
+        if (result.jekyllHeader==="start" && !inSrc) {
+          inSrc=true;
+          text+="---\n"
+        } else if (result.jekyllHeader==="end" && inSrc) {
+          inSrc=false;
+          var today = new Date();
+          var date = today.getFullYear() + "-" + (today.getMonth() + 1) + "-" + today.getDate()
+          // Remove the image dir value
+          // text = text.replace(/^\s*{{blogImageDir}}:\s+([a-zA-Z0-9 ]+)/i, "");
+          text+="layout: post\ndate: " + date + "\n---\n\n"
+        } else if(result.sourceWithType==="start" && !inSrc) {
+          inSrc=true;
+          text+="```"+result.sourceType+"\n";
+        } else if (result.sourceWithType==="end" && inSrc) {
+          inSrc=false;
+          text+="```\n\n";
+        } else if (result.sourcePretty==="start" && !inSrc) {
+          inSrc=true;
+          text+="<pre class=\"prettyprint\">\n";
+        } else if (result.sourcePretty==="end" && inSrc) {
+          inSrc=false;
+          text+="</pre>\n\n";
+        } else if (result.source==="start" && !inSrc) {
+          inSrc=true;
+          text+="<pre>\n";
+        } else if (result.source==="end" && inSrc) {
+          inSrc=false;
+          text+="</pre>\n\n";
+        } else if (result.inClass==="start" && !inClass) {
+          inClass=true;
+          text+="<div class=\""+result.className+"\">\n";
+        } else if (result.inClass==="end" && inClass) {
+          inClass=false;
+          text+="</div>\n\n";
+        } else if (inClass) {
           text+=result.text+"\n\n";
-      }
-      
-      if (result.images && result.images.length>0) {
-        for (var j=0; j<result.images.length; j++) {
-          attachments.push( {
-            "fileName": result.images[j].name,
-            "mimeType": result.images[j].type,
-            "content": result.images[j].bytes } );
+        } else if (inSrc) {
+          text+=(srcIndent+escapeHTML(result.text)+"\n");
+        } else if (result.text && result.text.length>0) {
+            text+=result.text+"\n\n";
         }
+        
+        if (result.images && result.images.length>0) {
+          for (var j=0; j<result.images.length; j++) {
+            attachments.push( {
+              "fileName": result.images[j].name,
+              "mimeType": result.images[j].type,
+              "content": result.images[j].bytes } );
+          }
+        }
+      } else if (inSrc) { // support empty lines inside source code
+        text+='\n';
       }
-    } else if (inSrc) { // support empty lines inside source code
-      text+='\n';
+        
     }
-      
+    
+    attachments.push({"fileName":DocumentApp.getActiveDocument().getName()+".md", "mimeType": "text/plain", "content": text});
+    
+    MailApp.sendEmail(Session.getActiveUser().getEmail(), 
+                      "[MARKDOWN_MAKER] "+DocumentApp.getActiveDocument().getName(), 
+                      "Your converted markdown document is attached (converted from "+DocumentApp.getActiveDocument().getUrl()+")"+
+                      "\n\nDon't know how to use the format options? See http://github.com/mangini/gdocs2md\n",
+                      { "attachments": attachments });
+  } catch (e) {
+    var errorMsg = "";
+        //While displaying error message, we display the last converted text, so that the users can know, after which line the conversion failed.
+        //Check if there is any last converted text. If so take the last sentence from the converted text. If not, just display the error message.
+        if (text != null && text.length != 0 && text.trim() !== "") {
+            var sentence = text.split(".");
+            if (sentence.length > 1) {
+                errorMsg = "Error after the line : \"" + sentence[sentence.length - 2] + "\".\n\n" + e;
+            } else if (sentence.length == 1) {
+                errorMsg = "Error after the line : \"" + sentence[sentence.length - 1] + "\".\n\n" + e;
+            } else if (sentence.length == 0) {
+                errorMsg = "Error after the text : \"" + text + "\".\n\n" + e;;
+            }
+        } else {
+            errorMsg = e;
+        }
+        //Showing the error message in alert window.
+      DocumentApp.getUi().alert("Error", errorMsg, DocumentApp.getUi().ButtonSet.OK);
   }
-  
-  attachments.push({"fileName":DocumentApp.getActiveDocument().getName()+".md", "mimeType": "text/plain", "content": text});
-  
-  MailApp.sendEmail(Session.getActiveUser().getEmail(), 
-                    "[MARKDOWN_MAKER] "+DocumentApp.getActiveDocument().getName(), 
-                    "Your converted markdown document is attached (converted from "+DocumentApp.getActiveDocument().getUrl()+")"+
-                    "\n\nDon't know how to use the format options? See http://github.com/mangini/gdocs2md\n",
-                    { "attachments": attachments });
 }
+
 
 function escapeHTML(text) {
   // return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
